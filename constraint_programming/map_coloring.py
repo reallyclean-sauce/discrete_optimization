@@ -132,16 +132,12 @@ class PreventColor(PropagationEngine):
 		"""Prunes the DomainStore
 		when a Color is not allowed to be a value for the Country
 		"""
-		print("PREVENTING:!!")
 		print(DomainStore.search_space[country])
 		DomainStore.search_space[country].discard(color)
 		print(DomainStore.search_space[country])
 
 		
 if __name__ == "__main__":
-	p = {10,12}
-	print(p)
-
 	assign_color = AssignColor()
 	prevent_color = PreventColor()
 	given = Given()
