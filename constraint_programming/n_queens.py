@@ -1,3 +1,19 @@
+"""
+Problem: 8 Queens in 8x8 chessboard
+
+Problem Definition: 
+You are given N queens. You must place each queen in the chessboard
+in such a way that none of the queens can attack each other.
+
+Goal: Assign a row for each queen
+
+Model: Each queen has a column assigned: i
+Decision Variable: Which row to place the queen: row[i]
+
+Lecture:
+Based on the lecture, this problem can be solve using Branch and Prune
+"""
+
 # Knapsack
 # Find the items that will maximize the value
 # Given a constraint on weight
