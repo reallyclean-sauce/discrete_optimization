@@ -7,395 +7,301 @@ from ConstraintPropagators import NotEqualPropagator, EqualityPropagator
 import SearchUtils
 import time
 from copy import deepcopy
+from utils import domain_printer
 import sys
 
 def str_to_class(classname):
-	return getattr(sys.modules[__name__], classname)
+    return getattr(sys.modules[__name__], classname)
 
 Constraint = namedtuple("Constraint", ['type', 'left', 'right'])
 
 class Reader:
-	@abstractmethod
-	def format(self,input_data): pass
-		
-
-class ConstraintModel:
-	"""
-	Implementation of the chosen 
-	Constraint Programming Model
-	as set of constraints
-	"""
-	def __init__(self):
-		self.constraints = []
-
-	def get_constraints(self): 
-		return self.constraints
-
-	def add(self, constraint):
-		self.constraints.append(constraint)
+    @abstractmethod
+    def format(self,input_data): pass
 
 
 class Initializer:
-	"""
-	Initializes constraint Model
-	Which also initialzes domain_store
-	"""
-	def init_constraint_store(self, model):
-		constraint_store = []
-		for constraint in model.constraints:
-			constraint_store.append(constraint)
+    """
+    Initializes constraint Model
+    Which also initialzes domain_store
+    """
+    def init_constraint_store(self, model):
+        constraint_store = []
+        for constraint in model.constraints:
+            constraint_store.append(constraint)
 
-		return constraint_store
+        return constraint_store
 
-	def init_propagation_engine(self,constraint_store):
-		engine = PropagationEngine()
-		for constraint in constraint_store:
-			service = str_to_class(constraint.type+'Propagator')
-			engine.propagators[constraint.type] = service()
+    def init_propagation_engine(self,constraint_store):
+        engine = PropagationEngine()
+        for constraint in constraint_store:
+            service = str_to_class(constraint.type+'Propagator')
+            engine.propagators[constraint.type] = service()
 
-		service = str_to_class('EqualityPropagator')
-		engine.propagators['Equality'] = service()
+        service = str_to_class('EqualityPropagator')
+        engine.propagators['Equality'] = service()
 
-		return engine
+        return engine
 
-	def init_propagators(self,constraint_store):
-		propagators = {}
-		for constraint in constraint_store:
-			service = str_to_class(constraint.type+'Propagator')
-			propagators[constraint.type] = service()
+    def init_propagators(self,constraint_store):
+        propagators = {}
+        for constraint in constraint_store:
+            service = str_to_class(constraint.type+'Propagator')
+            propagators[constraint.type] = service()
 
-		service = str_to_class('EqualityPropagator')
-		propagators['Equality'] = service()
+        service = str_to_class('EqualityPropagator')
+        propagators['Equality'] = service()
 
-		return propagators
-
-
-	def init_domain_store(self,items,model): 
-		domain_store = {}
-
-		for item in items:
-			domain_store['vars'].append(None)
-
-			temp_dict = {}
-			for name,value in item._asdict().iteritems():
-				temp_dict[name] = value	
-			domain_store['var_attrs'].append(temp_dict)
-
-		domain_store['domains'] = model.initialize_domain()
-
-		return domain_store
+        return propagators
 
 
-	def preliminary_prune(self, domain_store, constraint_store, propagation_engine):	
-		domains = domain_store['domains']
-		constraitns = constraint_store
+    def init_domain_store(self,items,model): 
+        domain_store = {}
 
-		prev_domains = domains
-		while True:
-			if not propagation_engine.feasibility_checking(domain_store,constraint_store):
-				break
-			domains = propagation_engine.pruning(domain_store,constraint_store)
-			if (domains == prev_domains):
-				break
+        for item in items:
+            domain_store['vars'].append(None)
 
-			prev_domains = domains
+            temp_dict = {}
+            for name,value in item._asdict().iteritems():
+                temp_dict[name] = value 
+            domain_store['var_attrs'].append(temp_dict)
 
-		return domains
+        domain_store['domains'] = model.initialize_domain()
 
-
+        return domain_store
 
 class SearchModule:
-	def get_variable_order(self,domain_store):
-		# Basic Variable Labeling
-		for idx,domain in enumerate(domain_store['domains']):
-			if len(domain) > 1:
-				return range(idx,len(domain_store['domains']))
+    def get_variable_order(self,domain_store):
+        # Basic Variable Labeling
+        for idx,domain in enumerate(domain_store['domains']):
+            if len(domain) > 1:
+                return range(idx,len(domain_store['domains']))
 
-		return None
+        return None
 
-	def get_value_order(self,domain_store,var_idx):
-		# Basic Variable->Value Labeling
-		return domain_store['domains'][var_idx]
-
-
-	def get_constraint(self,var,val):
-		# Create new constraint
-		left_variable = [var]
-		left_const = [1]
-		left_value = [0]
-
-		right_variable = [0]
-		right_const = [0]
-		right_value = [val]
+    def get_value_order(self,domain_store,var_idx):
+        # Basic Variable->Value Labeling
+        return domain_store['domains'][var_idx]
 
 
-		left = [left_variable,
-				left_const,
-				left_value]
+    def get_constraint(self,var,val):
+        # Create new constraint
+        left_variable = [var]
+        left_const = [1]
+        left_value = [0]
 
-		right = [right_variable,
-				right_const,
-				right_value]
+        right_variable = [0]
+        right_const = [0]
+        right_value = [val]
 
-		constraint = Constraint("Equality",
-								left,
-								right)
 
-		return constraint
+        left = [left_variable,
+                left_const,
+                left_value]
+
+        right = [right_variable,
+                right_const,
+                right_value]
+
+        constraint = Constraint("Equality",
+                                left,
+                                right)
+
+        return constraint
 
 
 class PropagationEngine:
-	def __init__(self):
-		self.propagators = {}
+    def feasibility_checking(self,propagators,state):
+        domains = state.domains
+        constraints = state.CS
+        for constraint in constraints:
+            if not propagators[constraint.type].feasibility_check(domains,constraint):
+                return False
+        return True
 
-	def __str__(self):
-		return ''.join([key for key in self.propagators])
+    def pruning(self,propagators,state):
+        new_domains = deepcopy(state.domains)
+        for constraint in state.CS:
+            new_domains = propagators[constraint.type].prune(new_domains,constraint)
 
-	def feasibility_checking(self,domain_store,constraint_store):
-		domains = domain_store['domains']
-		constraints = constraint_store
-		for constraint in constraints:
-			# print("HEREV1",constraint.type)
-			# print(self)
-			if not self.propagators[constraint.type].feasibility_check(domains,constraint):
-				return False
-
-		return True
-
-	def pruning(self,domain_store,constraint_store):
-		new_domains = domain_store['domains']
-		for constraint in constraint_store:
-			new_domains = self.propagators[constraint.type].prune(new_domains,constraint)
-
-		return new_domains
+        return new_domains
 
 class DomainStoreWorker:
-	def update(self,domain_store):
-		updated_domain_store = domain_store
-		for idx in range(len(domain_store['domains'])):
-			if len(domain_store['domains'][idx]) == 1:
-				updated_domain_store['vars'][idx] = domain_store['domains'][idx][0]
-		return updated_domain_store
-
-	def check_solution(self,domain_store):
-		for var in domain_store['vars']:
-			if var == None:
-				return False
-		
-		return True
+    def get_updated_vars(self,state):
+        decision_vars = deepcopy(state.vars)
+        for idx in range(len(state.domains)):
+            if len(state.domains[idx]) == 1:
+                decision_vars[idx] = state.domains[idx][0]
+        return decision_vars
 
 
-
-class Node:
-	def __init__(self,domain_store,constraint_store):
-		self.domain_store = domain_store
-		self.constraint_store = constraint_store
-
-
-class TraversalTree:
-	def __init__(self,root):
-		self.root = root
-		self.state_queue = [root]
-		self.solutions = []
-		self.domain_worker = DomainStoreWorker()
-
-	def init_modules(self,search_module,propagation_engine):
-		self.search_module = search_module
-		self.propagation_engine = propagation_engine
-
-	
-	def constraint_solution(self,current_node): 
-		domain_store = deepcopy(current_node.domain_store)
-		# print(domain_store)
-		constraint_store = deepcopy(current_node.constraint_store)
-		# print(constraint_store)
-
-		variable_order = self.search_module.get_variable_order(domain_store)
-		if variable_order is None:
-			return
-
-		for var_idx in variable_order:
-
-			value_order = self.search_module.get_value_order(domain_store,var_idx)
-			for value in value_order:
-				# print(var_idx,value)
-				constraint = self.search_module.get_constraint(var_idx,value)
-				new_constraint_store = deepcopy(constraint_store)
-				new_constraint_store.append(constraint)
-
-				# print("HERE")
-				if not self.propagation_engine.feasibility_checking(domain_store,new_constraint_store):
-					continue
-				
-				new_domain_store = deepcopy(domain_store)
-				prev_domains = domain_store['domains']
-				while True:
-					new_domains = self.propagation_engine.pruning(new_domain_store,new_constraint_store)
-					if prev_domains == new_domains:
-						break
-					prev_domains = new_domains
-					new_domain_store['domains'] = deepcopy(new_domains)
-
-				new_domain_store = self.domain_worker.update(new_domain_store)
-				if self.domain_worker.check_solution(new_domain_store):
-					print("SOLUTION")
-					self.solutions.append(new_domain_store['vars'])
-
-				print(new_domain_store['domains'])
-				# print(new_domain_store['vars'])
-				# print("Constraint:",constraint)
-				time.sleep(1)
-
-				new_node = Node(new_domain_store,new_constraint_store)
-				self.constraint_solution(new_node)
-
-			return
-
-# class Action(SearchModule,PropagationEngine,DomainStoreWorker):
-# 	def __init__(self):
-# 		SearchModule().__init__()
-# 		PropagationEngine().__init__()
-# 		DomainStoreWorker().__init__()
-
-# 	def create_children(self,state):
-# 		ordered_values = self.get_value_order(state)
-# 		return ordered_values
-
-# 	def get_next_state(self,value,state):
-# 		return next_state
-
-# N-Queens
-class TemplateDomainStore:
-	def __init__(self):
-		N = 4
-		self.DS = {}
-		self.DS['vars'] = [None] * N
-		self.DS['var_attrs'] = [[None]] * N
-		self.DS['domains'] = [list(range(N))] * N
-		self.var = 0
-
-
-class State(TemplateDomainStore,):
-	def __init__(self,domain_store,constraint_store,var):
-		self.DS = domain_store
-		self.var = var
-		# self.CS = constraint_store
-
-
-class Action(DomainStoreWorker):
-	def __init__(self):
-		self.total_action = 0
-		N = 4
-		self.template_domains = [
-					[list(range(N))]*N,
-					[[0],[1,2,3],[1,2,3],[1,2,3]],
-					[[0],[1],[1,2,3],[1,2,3]],
-					[[0],[2],[1,3],[1,3]],
-					[[0],[2],[1],[1,3]],
-					[[0],[2],[3],[1,3]],
-					[[0],[3],[1,2],[1,2]],
-					[[0],[3],[1],[1,2]],
-					[[0],[3],[1],[1]],
-					[[0],[3],[1],[2]],
-					[[0],[3],[2],[1,2]],
-					[[1],[0,2,3],[0,2,3],[0,2,3]],
-					[[1],[0],[0,2,3],[0,2,3]],
-					[[1],[2],[0,2,3],[0,2,3]],
-					[[1],[3],[0,2],[0,2]],
-					[[1],[3],[0],[2]],
-					]
-		self.template_var = [0,0,0,1,1,2,2,1,2,3,0,1,1,1,2]
-
-		self.init_state = {}
+    def check_solution(self,state):
+        if state.state_var == len(state.vars)-1:
+            print(state.domains)
+            return True     
+        return False
 
 
 
-	def create_children(self,state):
-		# Template: N-Queens
-		for domain in state.DS['domains']:
-			# print(domain)
-			if len(domain) > 1: 
-				return domain
+class ConstraintStoreWorker:
+    def add_constraint(self,state,constraint):
+        state.CS.append(constraint)
+    def equality_constraint(self,var,val):
+        constraint_type = "Equality"
+        # Lefthand Eqn
+        left_variable = [var]
+        left_const = [1]
+        left_value = [0]
+        left = [left_variable,
+                left_const,
+                left_value]
+        # Righthand Eqn
+        right_variable = [0]
+        right_const = [0]
+        right_value = [val]
+        right = [right_variable,
+                right_const,
+                right_value]
 
-		return None
+        constraint = Constraint(constraint_type,
+                                left,
+                                right)
 
-	def get_next_state(self,state,value):
-		# Pruning
-		self.total_action += 1
-		if self.total_action < len(self.template_domains):
-			new_domains = self.template_domains[self.total_action]
-		else:
-			return None
-		new_DS = deepcopy(state.DS)
-		new_DS['domains'] = deepcopy(new_domains)
-		new_DS = self.update(new_DS)
+        return constraint
 
-		# Feasibility Checking
-		for i,var_i in enumerate(new_DS['vars']):
-			if var_i is None:
-				continue
+    
 
-			for j,var_j in enumerate(new_DS['vars']):
-				if var_j is None:
-					continue
+class SearchModule:
+    def value_ordering(self,state):
+        return state.domains[state.state_var]
+    def get_next_variable(self,state):
+        return state.state_var + 1
 
-				if i >= j:
-					continue
+class State:
+    def __init__(self,level,DS,CS):     
+        self.state_var = level
 
-				if var_i == var_j: 
-					print("Not Feasible1")
-					print(state.var,new_DS)
-					print("=====================")
-					return None
-				elif var_i == var_j + (j-i): 
-					print("Not Feasible2")
-					print(state.var,new_DS)
-					print("=====================")
-					return None
-				elif var_i == var_j - (j-i):
-					print("Not Feasible3")
-					print(state.var,new_DS)
-					print("=====================")
-					return None
+        self.vars = DS['vars']
+        self.var_attrs = DS['var_attrs']
+        self.domains = DS['domains']
 
-		
-		next_state = deepcopy(state)
-		next_state.DS = new_DS
-		next_state.var = deepcopy(state.var + 1)
-
-		print(state.var,state.DS)
-		print(next_state.var,next_state.DS)
-		print("------------------")
-
-		return next_state
+        self.CS = CS
 
 
+class ConstraintModel:
+    """
+    Implementation of the chosen 
+    Constraint Programming Model
+    as set of constraints
+    """
+    def __init__(self):
+        self.constraints = []
 
-class Tree(Action):
-	def __init__(self):
-		super().__init__()
-		self.root = TemplateDomainStore()
+    def get_constraints(self): 
+        return self.constraints
 
-	def traverse(self,state):
-		if state is None:
-			return
+    def add(self, constraint):
+        self.constraints.append(constraint)
+        
+class Propagators:
+    def __init__(self):
+        self._propagators = {}
 
-		values = self.create_children(state)
-		if values is None:
-			return
+    def add_propagator(self,propagator):
+        self._propagator[propagator.constraint_type] = propagator
 
-		for value in values:
-			next_state = self.get_next_state(state,value)
-			time.sleep(5)
-			self.traverse(next_state)
+class Solver:
+    def __init__(self,propagators):
+        self.propagators = propagators
+        self.solutions = []
+
+    def preliminary_prune(self, root):
+        new_state = deepcopy(root)
+        new_domains = new_state.domains
+        prev_domains = new_domains
+        domain_printer(new_state.domains)
+        print("--------------------------")
+        i = 0
+        while True:
+            # print(i)
+            if not i % 100:
+                print("Pruning still on process...")
+            elif i == 5001:
+                i = 0
+
+            if not PropagationEngine().feasibility_checking(self.propagators,new_state):
+                break
+            new_domains = PropagationEngine().pruning(self.propagators,new_state)
+            domain_printer(new_domains)
+            print("--------------------------")
+            new_state.domains = new_domains
+            if (new_domains == prev_domains):
+                break   
+
+            i += 1
+            prev_domains = new_domains
+
+        return new_state
+
+    def solve(self,state):
+        if state is None:
+            self.solutions
+
+        # Get value range for a variable
+        # Sort the values accordingly
+        value_range = SearchModule().value_ordering(state)
+        # print("Value_range",state.state_var,value_range)
+
+        # Generate child nodes
+        # Sets which value the variable has to take
+        for i in value_range:
+            # if len(self.solutions) > 10:
+            #     return self.solutions
 
 
-		print("Finished!", state.var)
-		print(state.DS)
-		print("++++++++++++++++++++++")
-		time.sleep(5)
+            next_state = deepcopy(state)
 
-		return None
+            # ConstraintStoreWorker
+            # Add EqualityConstraint to constraint Store
+            constraint = ConstraintStoreWorker().equality_constraint(next_state.state_var,i)
+            next_state.CS.append(constraint)
+
+            # Propagation Engine
+            prev_domains = deepcopy(next_state.domains)
+            new_domains = prev_domains
+            while True:
+                # Feasibility Checking
+                if not PropagationEngine().feasibility_checking(self.propagators,deepcopy(next_state)): 
+                    return self.solutions
+                # Pruning Search Space
+                new_domains = PropagationEngine().pruning(self.propagators,deepcopy(next_state))
+
+                next_state.domains = new_domains
+                if prev_domains == new_domains:
+                    break
+                prev_domains = new_domains
+            
+            # print(next_state.domains)
+            # print(constraint)
+            # print("------------------------")
+
+            # DomainStoreWorker
+            # Update the Domain Store
+            next_state.vars = DomainStoreWorker().get_updated_vars(next_state)
+
+            # SearchModule
+            # Determines which Decision Variable to process
+            next_state.state_var = SearchModule().get_next_variable(next_state)
+
+            if DomainStoreWorker().check_solution(state):
+                # print("SOLUTION!!",state.vars)
+                self.solutions.append(state.vars)
+                return self.solutions
+
+            self.solve(next_state)
+
+        
+        return self.solutions
 
 
 
@@ -403,8 +309,8 @@ class Tree(Action):
 
 
 if __name__ == '__main__':
-	# Prototyping the Tree
-	tree = Tree()
+    # Prototyping the Tree
+    tree = Tree()
 
-	tree.traverse(tree.root)
+    tree.traverse(tree.root)
 

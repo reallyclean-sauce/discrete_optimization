@@ -29,20 +29,24 @@ Based on the lecture, this problem can be solve using Branch and Prune
 import time
 from CPArchitecture import Initializer
 from CPArchitecture import Solver, State
-from ModelFrameworkCP import NQueens
+from ModelFrameworkCP import SendMoreMoney
 
 # Global Var
-N = 8
+word1 = "SEND"
+word2 = "MORE"
+word3 = "MONEY"
 
 # Get Problem Framework
-n_queens_framework = NQueens(N)
+framework = SendMoreMoney(word1,word2,word3)
 
 # Domain Store Initialization
-domain_store = n_queens_framework.get_domain_store()
+domain_store = framework.get_domain_store()
 
 # Constraint Store Initialization
-n_queens_model = n_queens_framework.get_model()
-constraint_store = n_queens_model.get_constraints() 
+model = framework.get_model()
+constraint_store = model.get_constraints() 
+# for constraint in constraint_store:
+#   print(constraint)
 
 # Initialize propagators
 initializer = Initializer()
@@ -50,16 +54,18 @@ propagators = initializer.init_propagators(constraint_store)
 
 # Initialize solvers
 root = State(0,domain_store,constraint_store)
-queen_tree = Solver(propagators)
+ssm_solver = Solver(propagators)
+new_root = ssm_solver.preliminary_prune(root)
 
 # Start solving
 state_time = time.time()
-solutions = queen_tree.solve(root)
+solutions = ssm_solver.solve(new_root)
 runtime = time.time() - state_time
 
 # Identify Solutions
 if solutions != []:
-    print(solutions)
+    print("SOLUTION HERE")
+    framework.print_solution(solutions)
 else:
     print("No solution found")
 print(f"Total time taken: {runtime}s")
