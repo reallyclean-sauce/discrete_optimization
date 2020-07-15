@@ -65,7 +65,7 @@ runtime = time.time() - state_time
 # Identify Solutions
 if solutions != []:
     print("SOLUTION HERE")
-    framework.print_solution(solutions)
+    framework.print_solution(ssm_solver.solutions)
 else:
     # print(ssm_solver.variables_search)
     print("No solution found")

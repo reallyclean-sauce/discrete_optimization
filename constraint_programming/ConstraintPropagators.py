@@ -219,7 +219,7 @@ class EqualityPropagator(Propagator):
             l = 0
             for var,mult in zip(left_var,left_const_mult):
                 l += mult*max(domains[var])
-            for const in left_val:  
+            for const in left_val:
                 l += const
 
             r = 0
@@ -228,10 +228,9 @@ class EqualityPropagator(Propagator):
             for const in right_val:
                 r += const
 
-            if l < r:
-                # print("BRAHBRAH")
-                # print(l,r)
-                return new_domains
+            # print(l,r)
+            # print(new_domains)
+            # print(constraint)
 
             for var,mult in zip(left_var,left_const_mult):
                 max_var = max(domains[var])

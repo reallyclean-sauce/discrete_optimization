@@ -112,20 +112,27 @@ class SearchModule:
 
 
 class PropagationEngine:
-    def feasibility_checking(self,propagators,state):
-        domains = state.domains
+    def propagate_constraints(self,propagators,state):
+        # Output:
+        validity = True
+        new_domains = deepcopy(state.domains)
         constraints = state.CS
         for constraint in constraints:
-            if not propagators[constraint.type].feasibility_check(domains,constraint):
-                return False
-        return True
-
-    def pruning(self,propagators,state):
-        new_domains = deepcopy(state.domains)
-        for constraint in state.CS:
+            if not propagators[constraint.type].feasibility_check(new_domains,constraint):
+                validity = False
+                break
             new_domains = propagators[constraint.type].prune(new_domains,constraint)
 
-        return new_domains
+        return validity,new_domains
+
+    # def feasibility_checking(self,propagators,state):
+
+    # def pruning(self,propagators,state):
+    #     new_domains = deepcopy(state.domains)
+    #     for constraint in state.CS:
+            
+
+    #     return new_domains
 
 class DomainStoreWorker:
     def get_updated_vars(self,state):
@@ -243,9 +250,10 @@ class Solver:
             elif i == 5001:
                 i = 0
 
-            if not PropagationEngine().feasibility_checking(self.propagators,new_state):
-                break
-            new_domains = PropagationEngine().pruning(self.propagators,new_state)
+            valid,new_domains = PropagationEngine().propagate_constraints(self.propagators,new_state)
+            if not valid:
+                return self.solutions
+
             domain_printer(new_domains)
             print("--------------------------")
             new_state.domains = new_domains
@@ -289,11 +297,10 @@ class Solver:
             prev_domains = deepcopy(next_state.domains)
             new_domains = prev_domains
             while True:
-                # Feasibility Checking
-                if not PropagationEngine().feasibility_checking(self.propagators,deepcopy(next_state)): 
-                    return self.solutions
-                # Pruning Search Space
-                new_domains = PropagationEngine().pruning(self.propagators,deepcopy(next_state))
+                # Propagate constraints
+                valid,new_domains = PropagationEngine().propagate_constraints(self.propagators,next_state)
+                if not valid:
+                    return None
 
                 next_state.domains = new_domains
                 if prev_domains == new_domains:
