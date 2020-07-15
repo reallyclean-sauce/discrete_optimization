@@ -67,5 +67,6 @@ if solutions != []:
     print("SOLUTION HERE")
     framework.print_solution(solutions)
 else:
+    # print(ssm_solver.variables_search)
     print("No solution found")
 print(f"Total time taken: {runtime}s")

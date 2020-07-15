@@ -9,6 +9,7 @@ import time
 from copy import deepcopy
 from utils import domain_printer
 import sys
+import numpy as np
 
 def str_to_class(classname):
     return getattr(sys.modules[__name__], classname)
@@ -136,10 +137,14 @@ class DomainStoreWorker:
 
 
     def check_solution(self,state):
-        if state.state_var == len(state.vars)-1:
-            print(state.domains)
-            return True     
-        return False
+        for domain in state.domains:
+            if len(domain) > 1:
+                return False
+
+        # if state.state_var == len(state.vars)-1:
+        #     print(state.domains)
+        #     return True     
+        return True
 
 
 
@@ -173,9 +178,17 @@ class ConstraintStoreWorker:
 
 class SearchModule:
     def value_ordering(self,state):
+        state.domains[state.state_var].sort(reverse=True)
         return state.domains[state.state_var]
     def get_next_variable(self,state):
-        return state.state_var + 1
+        minimum_size = 1000
+        min_idx = state.state_var + 1
+        for idx,domain in enumerate(state.domains):
+            if (len(domain) < minimum_size) and (len(domain) != 1):
+                minimum_size = len(domain)
+                min_idx = idx
+
+        return min_idx
 
 class State:
     def __init__(self,level,DS,CS):     
@@ -214,6 +227,7 @@ class Solver:
     def __init__(self,propagators):
         self.propagators = propagators
         self.solutions = []
+        self.variables_search = []
 
     def preliminary_prune(self, root):
         new_state = deepcopy(root)
@@ -245,7 +259,12 @@ class Solver:
 
     def solve(self,state):
         if state is None:
-            self.solutions
+            return self.solutions
+        elif state.state_var == len(state.vars):
+            return self.solutions
+
+        # if not state.state_var in self.variables_search:
+        #     self.variables_search.append(state.state_var)
 
         # Get value range for a variable
         # Sort the values accordingly
@@ -294,7 +313,8 @@ class Solver:
             next_state.state_var = SearchModule().get_next_variable(next_state)
 
             if DomainStoreWorker().check_solution(state):
-                # print("SOLUTION!!",state.vars)
+                print("SOLUTION!!",state.vars)
+                # print(self.variables_search)
                 self.solutions.append(state.vars)
                 return self.solutions
 

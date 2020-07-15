@@ -234,6 +234,7 @@ class SendMoreMoney:
 
         for variables in solutions:
             answer_map = {}
+            print(variables)
             for value,identifier in zip(variables,self.identifiers):
                 answer_map[identifier] = str(value)
 
