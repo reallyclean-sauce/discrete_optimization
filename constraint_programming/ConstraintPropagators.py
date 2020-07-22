@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 import time
 from utils import domain_printer
 from copy import deepcopy
+import random
 
 class Propagator:
     @property
@@ -119,8 +120,142 @@ class NotEqualPropagator(Propagator):
                 new_domain.discard(val)
                 new_domains[prune_var] = list(new_domain)
 
+        for domain in new_domains:
+            if len(domain) == 0:
+                print(constraint)
+                print("===========================")
+
 
         return new_domains 
+
+class AllDifferentPropagator(Propagator):
+    constraint_type = 'AllDifferent'
+
+    class Matching:
+        def get_edges(self,domains,variables):
+            edges = []
+            for i in range(len(domains)):
+                for j in domains[i]:
+                    edges.append(tuple([i,j]))
+
+            return edges
+
+        def get_max_matching(self,edges):
+            max_match = []
+
+            vertices = set([var[0] for var in edges])
+
+            # Initial Stage
+            i = 0
+            stop_ctr = 0
+            vertex = list(vertices)[i]
+            while True:
+                values = set([var[1] for var in edges if var[0] == vertex])
+                matched_edge = None
+                for val in values:
+                    matched_values = set([var[1] for var in max_match])
+
+                    # Match chosen vertex to free value
+                    if not val in matched_values:
+                        matched_edge = tuple([vertex,val])
+                        max_match.append(matched_edge)
+                        break
+
+                # Initial stage increment
+                if not matched_edge is None:
+                    i = (i + 1) % len(vertices)
+                    vertex = list(vertices)[i]
+
+                    # Refresh stopping ctr
+                    stop_ctr = 0
+                    
+
+                # If no more free vertex
+                if (len(vertices) == len(max_match)) or (stop_ctr == len(vertices)):
+                    return max_match
+                
+                # If No more free value for remaining free vertex
+                elif matched_edge is None:
+                    matched_vertices = set([var[0] for var in max_match])
+                    free_vertices = vertices.difference(matched_vertices & vertices)
+
+                    # Selected any free vertex
+                    chosen_vertex = random.choice(list(free_vertices))
+                    
+
+                    # Select any values from corresponding chosen vertex
+                    corr_values = set([var[1] for var in edges if var[0] == vertex])
+                    value = random.choice(list(corr_values))
+                    
+
+                    # Get Match that contains value
+                    removed_match = [match for match in max_match if match[1] == value][0]
+                    # Remove the match
+                    max_match.remove(removed_match)
+
+                    # Add new match
+                    new_match = tuple([vertex,value])
+                    max_match.append(new_match)
+
+                    # Repeat with new vertex
+                    vertex = removed_match[0]
+
+                    # Increment stopping counter
+                    stop_ctr += 1
+
+
+    def feasibility_check(self,domains,constraint):
+        matcher = self.Matching()
+
+        variables = constraint.left
+
+        edges = matcher.get_edges(domains,constraint.left)
+
+        max_match = matcher.get_max_matching(edges)
+        # print(max_match,variables)
+        if len(variables) == len(max_match):
+            new_constraint = True
+        else:
+            new_constraint = False
+
+        total_elements = set([])
+        for elem in constraint.left:
+            total_elements = total_elements | set(domains[elem])
+
+        if len(total_elements) >= len(constraint.left):
+            old_constraint = True
+        else:
+            old_constraint = False
+
+        print(new_constraint,old_constraint)
+        return new_constraint
+
+    def prune(self,domains,constraint):
+        new_domains = deepcopy(domains)
+        for elem in constraint.left:
+            if len(new_domains[elem]) == 1:
+                for var in constraint.left:
+                    if elem == var:
+                        continue
+
+                    new_domain = set(new_domains[var])
+                    new_domain.discard(new_domains[elem][0])
+                    new_domains[var] = deepcopy(list(new_domain))
+                    if len(new_domain) == 0:
+                        print("Elem:",new_domains[elem],elem)
+                        print("Var:",new_domain,var)
+                        print("Prev domain",domains[var])
+                        print("===========================")    
+
+
+        # print(new_domains)
+        # for domain in new_domains:
+            # if len(domain) == 0:
+                # print(constraint)
+                # print("===========================")    
+
+        return new_domains
+
 
 
 class EqualityPropagator(Propagator):

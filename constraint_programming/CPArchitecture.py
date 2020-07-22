@@ -3,7 +3,7 @@
 from abc import ABCMeta, abstractmethod
 import json
 from collections import namedtuple
-from ConstraintPropagators import NotEqualPropagator, EqualityPropagator
+from ConstraintPropagators import NotEqualPropagator, EqualityPropagator, AllDifferentPropagator
 import SearchUtils
 import time
 from copy import deepcopy
@@ -158,6 +158,20 @@ class DomainStoreWorker:
 class ConstraintStoreWorker:
     def add_constraint(self,state,constraint):
         state.CS.append(constraint)
+    def create_alldifferent_constraint(self,elements):
+        alldifferent_list = []
+        for constraint in CS:
+            if constraint_type == 'NotEqual':
+                left_var = constraint.left[0]
+                left_const_mult = constraint.left[1]
+                right_var = constraint.right[0]
+                right_const_mult = constraint.right[1]
+                # if right_const_mult == [1] and left_const_mult == 1:
+
+        
+
+
+
     def equality_constraint(self,var,val):
         constraint_type = "Equality"
         # Lefthand Eqn
@@ -267,23 +281,17 @@ class Solver:
 
     def solve(self,state):
         if state is None:
-            return self.solutions
+            return None
         elif state.state_var == len(state.vars):
-            return self.solutions
-
-        # if not state.state_var in self.variables_search:
-        #     self.variables_search.append(state.state_var)
+            return None
 
         # Get value range for a variable
         # Sort the values accordingly
         value_range = SearchModule().value_ordering(state)
-        # print("Value_range",state.state_var,value_range)
 
         # Generate child nodes
         # Sets which value the variable has to take
         for i in value_range:
-            # if len(self.solutions) > 10:
-            #     return self.solutions
 
 
             next_state = deepcopy(state)
@@ -306,10 +314,6 @@ class Solver:
                 if prev_domains == new_domains:
                     break
                 prev_domains = new_domains
-            
-            # print(next_state.domains)
-            # print(constraint)
-            # print("------------------------")
 
             # DomainStoreWorker
             # Update the Domain Store
@@ -323,12 +327,9 @@ class Solver:
                 print("SOLUTION!!",state.vars)
                 # print(self.variables_search)
                 self.solutions.append(state.vars)
-                return self.solutions
+                return None
 
             self.solve(next_state)
-
-        
-        return self.solutions
 
 
 

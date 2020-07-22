@@ -19,7 +19,6 @@ Based on the lecture, this problem can be solve using Branch and Prune
 # Given a constraint on weight
 # Branch on the decision variables (taken)
 # Bound using the estimated values
-
 # Constraint Programming:
 # Find any solution
 # That satisfies the constraint
@@ -32,7 +31,7 @@ from CPArchitecture import Solver, State
 from ModelFrameworkCP import NQueens
 
 # Global Var
-N = 8
+N = 7
 
 # Get Problem Framework
 n_queens_framework = NQueens(N)
@@ -54,11 +53,13 @@ queen_tree = Solver(propagators)
 
 # Start solving
 state_time = time.time()
-solutions = queen_tree.solve(root)
+queen_tree.solve(root)
+solutions = queen_tree.solutions
 runtime = time.time() - state_time
 
 # Identify Solutions
 if solutions != []:
+    print("SOLUTIONSS!!")
     print(solutions)
 else:
     print("No solution found")

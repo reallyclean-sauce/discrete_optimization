@@ -3,7 +3,7 @@ Containe the Basic Frameworks for solving
 Discrete Optimization Problems
 Using Constraint Programming
 """
-from CPArchitecture import ConstraintModel, Constraint
+from CPArchitecture import ConstraintModel,Constraint
 
 
 class NQueens:
@@ -11,24 +11,31 @@ class NQueens:
         self.N = N
         # Constraint Store Initialization
         self.model = ConstraintModel()
+
+        # Alldifferent
+        left = list(range(N))
+        constraint_type = 'AllDifferent'
+        constraint = Constraint(constraint_type,left,[])
+        self.model.add(constraint)
+
         constraint_type = 'NotEqual'
         for i in range(N):
             for j in range(N):
                 if i >= j:
                     continue
 
-                left_var = [i]
-                left_const = [1]
-                left_val = [0]
-                left = [left_var,left_const,left_val]
+                # left_var = [i]
+                # left_const = [1]
+                # left_val = [0]
+                # left = [left_var,left_const,left_val]
 
-                right_var = [j]
-                right_const = [1]
-                right_val = [0]
-                right = [right_var,right_const,right_val]
+                # right_var = [j]
+                # right_const = [1]
+                # right_val = [0]
+                # right = [right_var,right_const,right_val]
 
-                constraint = Constraint(constraint_type,left,right)
-                self.model.add(constraint)
+                # constraint = Constraint(constraint_type,left,right)
+                # self.model.add(constraint)
 
 
                 left_var = [i]
@@ -63,7 +70,7 @@ class NQueens:
     def get_domain_store(self):
         # Domain Store Initialization
         total_vars = [None] * self.N
-        domains = [set(range(self.N))]*self.N
+        domains = [list(range(self.N))]*self.N
         attrs = [[None]]*self.N
         domain_store = {'vars': total_vars,
                         'domains': domains,

@@ -59,7 +59,8 @@ new_root = ssm_solver.preliminary_prune(root)
 
 # Start solving
 state_time = time.time()
-solutions = ssm_solver.solve(new_root)
+ssm_solver.solve(new_root)
+solutions = ssm_solver.solutions
 runtime = time.time() - state_time
 
 # Identify Solutions
