@@ -209,26 +209,14 @@ class AllDifferentPropagator(Propagator):
 
         variables = constraint.left
 
-        edges = matcher.get_edges(domains,constraint.left)
+        edges = matcher.get_edges(domains,variables)
 
         max_match = matcher.get_max_matching(edges)
-        # print(max_match,variables)
+
         if len(variables) == len(max_match):
-            new_constraint = True
+            return True
         else:
-            new_constraint = False
-
-        total_elements = set([])
-        for elem in constraint.left:
-            total_elements = total_elements | set(domains[elem])
-
-        if len(total_elements) >= len(constraint.left):
-            old_constraint = True
-        else:
-            old_constraint = False
-
-        print(new_constraint,old_constraint)
-        return new_constraint
+            return False
 
     def prune(self,domains,constraint):
         new_domains = deepcopy(domains)
@@ -246,13 +234,6 @@ class AllDifferentPropagator(Propagator):
                         print("Var:",new_domain,var)
                         print("Prev domain",domains[var])
                         print("===========================")    
-
-
-        # print(new_domains)
-        # for domain in new_domains:
-            # if len(domain) == 0:
-                # print(constraint)
-                # print("===========================")    
 
         return new_domains
 

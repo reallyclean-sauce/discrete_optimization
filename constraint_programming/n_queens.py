@@ -31,7 +31,7 @@ from CPArchitecture import Solver, State
 from ModelFrameworkCP import NQueens
 
 # Global Var
-N = 7
+N = 4
 
 # Get Problem Framework
 n_queens_framework = NQueens(N)
